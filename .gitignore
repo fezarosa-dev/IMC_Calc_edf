@@ -1,4 +1,6 @@
 # Ignorar arquivos temporários
 *~
-# Ignorar arquivos de log
+# Ignorar arquivos
 *.log
+people.json
+*.xls;xlsx;csv
