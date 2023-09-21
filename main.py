@@ -13,48 +13,54 @@ if file_name[-4:] != 'xlsx':
 
 counter = 1
 terminal.titulo('Digite tudo que se pede: ', terminal.Cores.roxo)
-informations_list = []
-
 while True:
+    informations_dict = {}
+
     while True:
         name = input('Digite o nome: ')
-        if name.isalpha():
+        if name.replace(' ', '').isalpha():
             break
+
     while True:
         age = input('Digite a idade: ')
         if age.isdigit():
             age = float(age)
             break
+
     while True:
-        gender = input('Digite o genero (M para masculino e F para feminino): ')
-        if gender.isalpha():
-            if gender.lower() in 'mf':
-                gender = gender.lower()
-                break
+        gender = input('Digite o gênero (M para masculino e F para feminino): ')
+        if gender.isalpha() and gender.lower() in 'mf':
+            gender = gender.lower()
+            break
+
     while True:
         weight = input('Digite o peso: ')
-        if weight.isdigit():
-            altura = float(altura)
-            if float(altura) >= 3:
-                altura = float(altura)
+        if weight.replace(',', '', 1).replace('.', '', 1).isdigit():
+            weight = float(weight.replace(',', '.', 1))
             break
-    height = input('Digite a altura: ')
 
-    stop = input('Deseja parar? (S para parar): ')
-    if stop.lower() =='s':
-        break
+    while True:
+        height = input('Digite a altura (use ponto para separar decimais, por exemplo, 1.75): ')
+        if height.replace(',', '', 1).replace('.', '', 1).replace(' ', '').replace('m', '').isdigit():
+            height = float(height.replace(',', '.', 1).replace('m', ''))
+            if height > 3:
+                height = height / 100
+            break
 
-
-    informations = {
+    informations_dict = {
         'name': name,
         'age': age,
         'gender': gender,
         'weight': weight,
         'height': height,
-        }
+    }
 
+    stop = input('Deseja parar? (S para parar): ')
+    if stop.lower() == 's':
+        break
 
     counter += 1
 
-logging.basicConfig(filename='meu_numero.log', level=logging.INFO, format='%(message)s')
+logging.basicConfig(filename='quantity.log', level=logging.INFO, format='%(message)s')
 logging.info(counter)
+print(informations_dict)
