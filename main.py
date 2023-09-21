@@ -3,59 +3,75 @@ import logging
 import math
 import tkinter as tk
 import tkinter.simpledialog as simpledialog
-
-from funcoes import dados
+import openpyxl
+import os
 from funcoes import terminal
+# Função para criar uma planilha XLSX com base nos dados do JSON
+def makexlsx(file_name):
+    # Ler o arquivo JSON
+    with open('people.json', 'r') as json_file:
+        json_data = json.load(json_file)
 
-planilha = bool()
+    # Criar uma nova planilha XLSX
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
 
+    # Verificar se há dados no JSON
+    if json_data:
+        # Adicionar um cabeçalho com os nomes das colunas com base nas chaves do primeiro dicionário no JSON
+        header = list(json_data[0].keys())
+        sheet.append(header)
 
-def pegar_dados():
-    global planilha
-    root.destroy()  # Fecha a janela
-    planilha = False
+        # Adicionar os dados do JSON à planilha
+        for row in json_data:
+            data = list(row.values())
+            sheet.append(data)
 
+        # Salvar a planilha em um arquivo XLSX
+        workbook.save(file_name)
 
-def gerar_planilhas():
-    global planilha
-    root.destroy()  # Fecha a janela
-    planilha = True
+        print("Planilha criada com sucesso.")
+    else:
+        print("O JSON está vazio. Nenhuma planilha foi criada.")
 
+# Função para verificar e corrigir o formato do JSON
+def verificar_e_corrigir_json(nome_arquivo):
+    with open(nome_arquivo, 'rb+') as arquivo:
+        # Ler o primeiro caractere
+        primeiro_caractere = arquivo.read(1)
 
-root = tk.Tk()
-root.title("Selecione uma Opção")
+        # Se o primeiro caractere não for '[', adicione '[' no início do arquivo
+        if primeiro_caractere != b'[':
+            arquivo.seek(0)
+            conteudo_resto = arquivo.read()
+            arquivo.seek(0)
+            arquivo.write(b'[' + conteudo_resto)
 
-label = tk.Label(root, text="Escolha uma opção:")
-label.pack()
+        # Deslocar o cursor para o final do arquivo
+        arquivo.seek(-1, os.SEEK_END)
+        # Ler o último caractere
+        ultimo_caractere = arquivo.read(1)
 
-pegar_button = tk.Button(root, text="Pegar Dados", command=pegar_dados)
-pegar_button.pack()
+        # Se o último caractere não for ']', adicione ']' no final do arquivo
+        if ultimo_caractere != b']':
+            arquivo.seek(-1, os.SEEK_END)
+            arquivo.write(b']')
 
-gerar_button = tk.Button(root, text="Gerar Planilhas com Dados Existentes", command=gerar_planilhas)
-gerar_button.pack()
-
-root.mainloop()
-
-if planilha:
-    # Solicitar o nome do arquivo
-    file_name_xlsx = simpledialog.askstring("Nome do Arquivo XLSX", "Digite o nome do arquivo XLSX:")
-    file_name_xlsx.strip()
-
-    if file_name_xlsx[-4:] != 'xlsx':
-        file_name_xlsx = file_name_xlsx + '.xlsx'
-    dados.makexlsx(file_name_xlsx)
-
-else:
-    # Abrir o arquivo XLSX no modo de anexação (não alterar essa parte)
-    # ...
-
+# Função para coletar dados das pessoas e salvar em JSON
+def coletar_dados():
     # Nome do arquivo JSON
     file_name_json = 'people.json'
 
-    # Lista para armazenar todas as informações coletadas
-    informations_list = []
     counter = 1
-    terminal.titulo('Digite tudo que se pede: ', terminal.Cores.roxo)
+
+    if not os.path.isfile(file_name_json):
+        # Crie um dicionário vazio
+        dados = []
+
+        # Crie o arquivo JSON em branco
+        with open(file_name_json, 'w') as arquivo:
+            json.dump(dados, arquivo)
+
     while True:
         informations_dict = {}
 
@@ -102,7 +118,7 @@ else:
         elif 35.0 <= imc < 40.0:
             imcstatus = "Obesidade grau 2"
         else:
-            imcstatus = "Obesidade grau 3 (obesidade mórbida)"
+            imcstatus = "Obesidade grau 3 (obesidade morbida)"
         informations_dict = {
             'name': name,
             'age': age,
@@ -113,19 +129,50 @@ else:
             'imcStatus': imcstatus,
         }
 
-        # Adicionar o dicionário de informações à lista
-        informations_list.append(informations_dict)
-        terminal.titulo(
-        terminal.titulo(f"{informations_dict['name']} numero: {counter}, tem o imc de {informations_dict['imc']}, sendo {informations_dict['imcStatus']}"))
+        with open(file_name_json, 'a') as arquivo_json:
+            # Verifica se o arquivo não está vazio (se já possui pelo menos um dicionário)
+            arquivo_json.seek(0, 2)  # Move o cursor para o final do arquivo
+            if arquivo_json.tell() > 0:
+                arquivo_json.write(',')  # Adiciona uma vírgula antes do novo dicionário
+
+            # Adiciona o novo dicionário à lista no arquivo JSON
+            json.dump(informations_dict, arquivo_json, indent=4)
+
+        print(f"{informations_dict['name']} número: {counter}, tem o IMC de {informations_dict['imc']}, sendo {informations_dict['imcStatus']}")
         stop = input('Deseja parar? (S para parar): ')
         if stop.lower() == 's':
             break
 
         counter += 1
 
+    # Registrar o número total de registros no arquivo de log
     logging.basicConfig(filename='quantity.log', level=logging.INFO, format='%(message)s', filemode='w')
     logging.info(counter)
+    verificar_e_corrigir_json(file_name_json)
+    root.quit()
 
-    # Salvar a lista de informações em um arquivo JSON
-    with open(file_name_json, 'a') as json_file:
-        json.dump(informations_list, json_file)
+# Função para gerar planilhas com os dados existentes
+def gerar_planilhas():
+    # Solicitar o nome do arquivo XLSX
+    file_name_xlsx = simpledialog.askstring("Nome do Arquivo XLSX", "Digite o nome do arquivo XLSX:")
+    file_name_xlsx = file_name_xlsx.strip()
+
+    if not file_name_xlsx.endswith('.xlsx'):
+        file_name_xlsx += '.xlsx'
+    makexlsx(file_name_xlsx)
+    root.quit()
+
+# Configurar a interface gráfica usando tkinter
+root = tk.Tk()
+root.title("Selecione uma Opção")
+
+label = tk.Label(root, text="Escolha uma opção:")
+label.pack()
+
+pegar_button = tk.Button(root, text="Pegar Dados", command=coletar_dados)
+pegar_button.pack()
+
+gerar_button = tk.Button(root, text="Gerar Planilhas com Dados Existentes", command=gerar_planilhas)
+gerar_button.pack()
+
+root.mainloop()
