@@ -1,0 +1,4 @@
+# Ignorar arquivos temporários
+*~
+# Ignorar arquivos de log
+*.log
